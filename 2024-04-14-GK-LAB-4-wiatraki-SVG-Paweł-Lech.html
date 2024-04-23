@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Paweł Lech, Lab 4, SVG wiatraki</title>
+    <style>
+        body
+        {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #00b8ad; /* Ustawienie koloru tła */
+        }
+
+        svg
+        {
+            width: 800px;
+            height: 600px;
+            border: 1px solid black; /* Ramka dookoła elementu SVG */
+            background: rgb(255, 255, 255); /* Białe tło dla SVG */
+        }
+
+
+        h2
+        {
+            position: absolute;
+            top: 0%;
+            left: 40%;
+            transform: translateX(-50%); /* Centrowanie nagłówka */
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Paweł Lech, Lab 4, SVG wiatraki</h2>
+    <svg id="svgRoot">
+    </svg>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const svgNS = "http://www.w3.org/2000/svg"; // Definicja przestrzeni nazw dla SVG
+            const svg = document.getElementById("svgRoot");
+
+            // Funkcja tworząca podstawę (podporę)
+            function createFulcrum(x, y, height, baseHalfWidth, color) {
+                const points = [
+                    x + "," + (y - height), // Górny punkt trójkąta (punkt podparcia)
+                    (x - baseHalfWidth) + "," + y, // Lewy dolny punkt trójkąta
+                    (x + baseHalfWidth) + "," + y  // Prawy dolny punkt trójkąta
+                ].join(" ");
+
+                const fulcrum = document.createElementNS(svgNS, "polygon");
+                fulcrum.setAttribute("points", points);
+                fulcrum.setAttribute("fill", color);
+                svg.appendChild(fulcrum);
+            }
+
+            // Funkcja tworząca koło
+            function createWheel(x, y, sideLength, group) {
+                const radius = sideLength / (2 * Math.sin(Math.PI / 5));
+                const points = [];
+                
+                const wheelGroup = document.createElementNS(svgNS, "g");
+
+                for (let i = 0; i < 5; i++)
+                {
+                    let angle_deg = i * 72;
+                    let angle_rad = angle_deg * Math.PI / 180;
+                    let pointX = x + radius * Math.cos(angle_rad);
+                    let pointY = y + radius * Math.sin(angle_rad);
+                    points.push(pointX + ',' + pointY);
+
+                    const spoke = document.createElementNS(svgNS, "line");
+                    spoke.setAttribute("x1", x);
+                    spoke.setAttribute("y1", y);
+                    spoke.setAttribute("x2", pointX);
+                    spoke.setAttribute("y2", pointY);
+                    spoke.setAttribute("stroke", "black");
+                    wheelGroup.appendChild(spoke);
+                }
+
+                const wheel = document.createElementNS(svgNS, "polygon");
+                wheel.setAttribute("points", points.join(' '));
+                wheel.setAttribute("fill", "transparent");
+                wheel.setAttribute("stroke", "black");
+                wheelGroup.appendChild(wheel);
+                group.appendChild(wheelGroup);
+
+                return wheelGroup;
+            }
+
+            // Funkcja tworząca belkę
+            function createBar(startX, startY, endX, endY, width, color, group) {
+                const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
+
+                const bar = document.createElementNS(svgNS, "rect");
+                bar.setAttribute("x", startX);
+                bar.setAttribute("y", startY - width / 2);
+                bar.setAttribute("width", length);
+                bar.setAttribute("height", width);
+                bar.setAttribute("fill", color);
+                bar.setAttribute("transform", `rotate(${angle}, ${startX}, ${startY})`);
+                group.appendChild(bar);
+            }
+
+            // Funkcja tworząca zespół elementów (montaż)
+            function createAssembly(x, y, scale, fulcrumColor) {
+                const rotatingGroup = document.createElementNS(svgNS, "g");
+                rotatingGroup.setAttribute("transform", `translate(${x}, ${y}) scale(${scale})`);
+
+                createFulcrum(x, y + 71 * scale, 71 * scale, 19 * scale, fulcrumColor);
+                svg.appendChild(rotatingGroup);
+
+                const leftWheelGroup = createWheel(-75, 0, 18, rotatingGroup);
+                const rightWheelGroup = createWheel(75, 0, 18, rotatingGroup);
+                createBar(-80, 0, 80, 0, 10, 'red', rotatingGroup);
+
+                animateAssembly(rotatingGroup, leftWheelGroup, rightWheelGroup); 
+            }
+
+            // Funkcja animująca zespół elementów
+            function animateAssembly(group, leftWheelGroup, rightWheelGroup) {
+                let angle = 0;
+                const wheelSpeedFactor = 2;
+
+                function animate() {
+                    angle = (angle + 1) % 360;
+                    const reverseAngle = 360 - (angle * wheelSpeedFactor) % 360;
+
+                    group.setAttribute('transform', group.getAttribute('transform').split(' rotate')[0] + ` rotate(${angle})`);
+
+                    leftWheelGroup.setAttribute('transform', `rotate(${reverseAngle}, ${leftWheelGroup.getBBox().x + leftWheelGroup.getBBox().width / 2}, ${leftWheelGroup.getBBox().y + leftWheelGroup.getBBox().height / 2})`);
+                    rightWheelGroup.setAttribute('transform', `rotate(${reverseAngle}, ${rightWheelGroup.getBBox().x + rightWheelGroup.getBBox().width / 2}, ${rightWheelGroup.getBBox().y + rightWheelGroup.getBBox().height / 2})`);
+
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            }
+
+            createAssembly(150, 250, 1, '#0002cf');
+            createAssembly(460, 360, 1.4, "#004ecf");
+            createAssembly(730, 220, 0.6, "#00a281");
+        });
+    </script>
+</body>
+</html>
